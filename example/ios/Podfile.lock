@@ -1,0 +1,28 @@
+PODS:
+  - azure_tts_flutter (0.0.1):
+    - Flutter
+  - Flutter (1.0.0)
+  - integration_test (0.0.1):
+    - Flutter
+
+DEPENDENCIES:
+  - azure_tts_flutter (from `.symlinks/plugins/azure_tts_flutter/ios`)
+  - Flutter (from `Flutter`)
+  - integration_test (from `.symlinks/plugins/integration_test/ios`)
+
+EXTERNAL SOURCES:
+  azure_tts_flutter:
+    :path: ".symlinks/plugins/azure_tts_flutter/ios"
+  Flutter:
+    :path: Flutter
+  integration_test:
+    :path: ".symlinks/plugins/integration_test/ios"
+
+SPEC CHECKSUMS:
+  azure_tts_flutter: 0ae7c7c415bece6bebd03c7faba0366fc31847c6
+  Flutter: f04841e97a9d0b0a8025694d0796dd46242b2854
+  integration_test: 13825b8a9334a850581300559b8839134b124670
+
+PODFILE CHECKSUM: 02caaa843f6501172c0d470d80e72f61175c8b93
+
+COCOAPODS: 1.14.3
