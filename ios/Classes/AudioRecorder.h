@@ -6,6 +6,7 @@
 #import <Foundation/Foundation.h>
 #import <MicrosoftCognitiveServicesSpeech/SPXSpeechApi.h>
 
+
 @interface AudioRecorder : NSObject
 
 - (instancetype)initWithPushStream:(SPXPushAudioInputStream *)stream;

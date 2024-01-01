@@ -19,15 +19,18 @@ class _MyAppState extends State<MyApp> {
   String _platformVersion = 'Unknown';
   final _azureTtsFlutterPlugin = AzureTtsFlutter();
 
+  String _centerText = '';
+  bool isRecognizing = false;
+
+  String intermediateResult = '';
+  String finalResult = '';
+
   @override
   void initState() {
     super.initState();
     initPlatformState();
 
-    String key = 'xxxx';
-    String region = 'eastus';
-    String lang = 'zh-CN';
-    _azureTtsFlutterPlugin.init(key, region, lang);
+    initAzure();
   }
 
   // Platform messages are asynchronous, so we initialize in an async method.
@@ -61,17 +64,87 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
+  Future<void> stop() async {
+    try {
+      // await platform.invokeMethod('startRecognize');
+      _centerText = '';
+      finalResult = '';
+      _azureTtsFlutterPlugin.stopRecognize();
+    } on PlatformException catch (e) {
+      print(e.message);
+    }
+  }
+
+  Future platformCallHandler(MethodCall call) async {
+    switch (call.method) {
+      case "azure.onStartAvailable":
+        print(call.arguments);
+        break;
+      case "azure.onRecognitionStopped":
+        print(call.arguments);
+        break;
+      default:
+        print("Error: method called not found");
+    }
+  }
+
+  void initAzure() {
+    String key = 'xxxx';
+    String region = 'xxxxxx';
+    String lang = 'zh-CN';
+    _azureTtsFlutterPlugin.init(key, region, lang);
+
+    // zuckjet code
+    _azureTtsFlutterPlugin.setRecognitionResultHandler((text) {
+      print('result handler handler 9999999999999');
+      print(text);
+      print(finalResult);
+      finalResult += text;
+      setState(() {
+        _centerText = finalResult;
+      });
+    });
+
+    _azureTtsFlutterPlugin.setRecognizingHandler((text) {
+      print('ing ing ing ing ing 8888888888888');
+      print(text);
+      print(finalResult);
+      setState(() {
+        _centerText = finalResult + text;
+      });
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       home: Scaffold(
         appBar: AppBar(
-          title: const Text('Plugin example app'),
+          title: const Text('azure_tts_flutter example'),
         ),
         body: Center(
-          child: ElevatedButton(
-            onPressed: start,
-            child: const Text('start recognize'),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: <Widget>[
+              Text(_centerText),
+              Container(
+                height: 60,
+              ),
+              ElevatedButton(
+                onPressed: start,
+                child: const Text('start recognize'),
+              ),
+              Container(
+                height: 40,
+              ),
+              ElevatedButton(
+                onPressed: stop,
+                child: const Text('stop recognize'),
+              ),
+              Container(
+                height: 80,
+              ),
+            ],
           ),
         ),
       ),

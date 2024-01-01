@@ -12,4 +12,16 @@ class AzureTtsFlutter {
   void startRecognize() {
     AzureTtsFlutterPlatform.instance.startRecognize();
   }
+
+  void stopRecognize() {
+    AzureTtsFlutterPlatform.instance.stopRecognize();
+  }
+
+  void setRecognitionResultHandler(StringResultHandler handler) {
+    AzureTtsFlutterPlatform.instance.setRecognitionResultHandler(handler);
+  }
+
+  void setRecognizingHandler(StringResultHandler handler) {
+    AzureTtsFlutterPlatform.instance.setRecognizingHandler(handler);
+  }
 }

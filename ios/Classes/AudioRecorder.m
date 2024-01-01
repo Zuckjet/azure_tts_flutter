@@ -7,8 +7,9 @@
 #import <AVFoundation/AVFoundation.h>
 
 static const int kNumberBuffers = 3;
-static AudioFileID recordFile = NULL;// zuckjet
-static SInt64 recordPacket = 0; //zuckjet
+static AudioQueueRef recordQueue = NULL;
+static AudioFileID recordFile = NULL;
+static SInt64 recordPacket = 0;
 
 @interface AudioRecorder () {
     AudioQueueRef               queueRef;
@@ -56,20 +57,18 @@ static SInt64 recordPacket = 0; //zuckjet
         if (status != noErr) {
             NSLog(@"create recorder file failure");
         }
-        // zuckjet online demo choose
-        // zuckjet
-        NSString *fileString = [AudioRecorder createFilePath];
-        NSLog(@"fileString is %@", fileString);
-        // CFStringRef fileUrl = (CFStringRef) fileString;
-        
-        CFStringRef fileUrl = CFStringCreateWithCString (NULL, [fileString   UTF8String],
-                                            kCFStringEncodingUTF8);
-        CFURLRef audioFileURL = CFURLCreateWithFileSystemPath(kCFAllocatorDefault, fileUrl, kCFURLPOSIXPathStyle, false);
 
-        AudioFileCreateWithURL(audioFileURL, kAudioFileCAFType, &recordFormat, kAudioFileFlags_EraseFile, &recordFile);
-        // CFRelease(audioFileURL);
-        // zuckjet
-        // zuckjet online demo choose
+
+        NSString *fileString = [AudioRecorder createFilePath];
+    NSLog(@"fileString is %@", fileString);
+    
+    CFStringRef fileUrl = CFStringCreateWithCString (NULL, [fileString   UTF8String], kCFStringEncodingUTF8);
+    CFURLRef audioFileURL = CFURLCreateWithFileSystemPath(kCFAllocatorDefault, fileUrl, kCFURLPOSIXPathStyle, false);
+    AudioFileCreateWithURL(audioFileURL, kAudioFileCAFType, &recordFormat, kAudioFileFlags_EraseFile, &recordFile);
+    CFRelease(audioFileURL);
+
+
+
     }
     return self;
 }
@@ -94,30 +93,23 @@ static void recorderCallBack(void *aqData,
     if (recorder.isRunning) {
         AudioQueueEnqueueBuffer(inAQ, inBuffer, 0, NULL);
     }
-    
-    // below code is written by zuckjet
+
+
     if (inNumPackets > 0) {
-            // Write packets to a file
-            OSStatus status = AudioFileWritePackets(recordFile, FALSE, inBuffer->mAudioDataByteSize, inPacketDesc, recordPacket, &inNumPackets, inBuffer->mAudioData);
-            assert(status == noErr);
-            
-            // Increment packet count
-            recordPacket += inNumPackets;
+        NSLog(@"inNumPackets is %d", inNumPackets);
+        // Write packets to a file
+        OSStatus status = AudioFileWritePackets(recordFile, FALSE, inBuffer->mAudioDataByteSize, inPacketDesc, recordPacket, &inNumPackets, inBuffer->mAudioData);
+        assert(status == noErr);
+        
+        // Increment packet count
+        recordPacket += inNumPackets;
     }
-    // above code is written by zuckjet
 }
 
 - (void)record {
     if (self.isRunning) {
         return;
     }
-    
-    
-    
-    
-    
-    
-    
 
     [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayAndRecord error:nil];
     [[AVAudioSession sharedInstance] setActive:true error:nil];
@@ -128,6 +120,28 @@ static void recorderCallBack(void *aqData,
         return;
     }
     _isRunning = true;
+
+
+
+    // ...
+
+
+    // AudioStreamBasicDescription recordFormat = {0};
+    // recordFormat.mFormatID = kAudioFormatLinearPCM;
+    // recordFormat.mSampleRate = 16000;
+    // recordFormat.mChannelsPerFrame = 1;
+    // recordFormat.mBitsPerChannel = 16;
+    // recordFormat.mFramesPerPacket = 1;
+    // recordFormat.mBytesPerFrame = recordFormat.mBytesPerPacket = (recordFormat.mBitsPerChannel / 8) * recordFormat.mChannelsPerFrame;
+    // recordFormat.mFormatFlags = kLinearPCMFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked;
+
+    // NSString *fileString = [AudioRecorder createFilePath];
+    // NSLog(@"fileString is %@", fileString);
+    
+    // CFStringRef fileUrl = CFStringCreateWithCString (NULL, [fileString   UTF8String], kCFStringEncodingUTF8);
+    // CFURLRef audioFileURL = CFURLCreateWithFileSystemPath(kCFAllocatorDefault, fileUrl, kCFURLPOSIXPathStyle, false);
+    // AudioFileCreateWithURL(audioFileURL, kAudioFileCAFType, &recordFormat, kAudioFileFlags_EraseFile, &recordFile);
+    // CFRelease(audioFileURL);
 }
 
 - (void)stop
@@ -139,11 +153,15 @@ static void recorderCallBack(void *aqData,
         [[AVAudioSession sharedInstance] setActive:false
                                        withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation
                                              error:nil];
+
+        AudioQueueDispose(queueRef, true);
+        AudioFileClose(recordFile);
+        recordFile = NULL;
+        recordPacket = 0;
+
     }
 }
 
-
-// zuckjet online demo
 + (NSString *)createFilePath {
     NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
     dateFormatter.dateFormat = @"yyyy_MM_dd__HH_mm_ss";
@@ -167,4 +185,3 @@ static void recorderCallBack(void *aqData,
 }
 
 @end
-

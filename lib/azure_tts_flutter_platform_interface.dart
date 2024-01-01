@@ -2,6 +2,8 @@ import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 import 'azure_tts_flutter_method_channel.dart';
 
+typedef void StringResultHandler(String text);
+
 abstract class AzureTtsFlutterPlatform extends PlatformInterface {
   /// Constructs a AzureTtsFlutterPlatform.
   AzureTtsFlutterPlatform() : super(token: _token);
@@ -32,6 +34,18 @@ abstract class AzureTtsFlutterPlatform extends PlatformInterface {
   }
 
   void startRecognize() {
+    throw UnimplementedError('startRecognize() has not been implemented.');
+  }
+
+  void stopRecognize() {
+    throw UnimplementedError('stopRecognize() has not been implemented.');
+  }
+
+  void setRecognitionResultHandler(StringResultHandler handler) {
+    throw UnimplementedError('startRecognize() has not been implemented.');
+  }
+
+  void setRecognizingHandler(StringResultHandler handler) {
     throw UnimplementedError('startRecognize() has not been implemented.');
   }
 }
