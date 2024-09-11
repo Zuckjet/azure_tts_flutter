@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
 
 import 'package:flutter/services.dart';
 import 'package:azure_tts_flutter/azure_tts_flutter.dart';
+import 'dart:io';
+import 'package:audioplayers/audioplayers.dart';
 
 void main() {
   runApp(const MyApp());
@@ -24,13 +28,40 @@ class _MyAppState extends State<MyApp> {
 
   String intermediateResult = '';
   String finalResult = '';
+  String filePaths = '';
 
   @override
   void initState() {
     super.initState();
     initPlatformState();
-
     initAzure();
+    // print(datas);
+
+    // test();
+  }
+
+  void test() async {
+    if (!File(filePaths).existsSync()) {
+      print('file not exist');
+    } else {
+      print('file exist');
+    }
+
+    await Future.delayed(const Duration(seconds: 5));
+
+    final player = AudioPlayer();
+    player.setVolume(50000);
+    await player.play(DeviceFileSource(filePaths));
+  }
+
+  Future<String> getPath(String prefix, String suffix) async {
+    final dir = await getApplicationDocumentsDirectory();
+    final fileName =
+        '${prefix}_${DateTime.now().millisecondsSinceEpoch}.$suffix';
+    return p.join(
+      dir.path,
+      fileName,
+    );
   }
 
   // Platform messages are asynchronous, so we initialize in an async method.
@@ -56,9 +87,17 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> start() async {
+    finalResult = '';
+    setState(() {
+      _centerText = '';
+    });
+
     try {
       // await platform.invokeMethod('startRecognize');
-      _azureTtsFlutterPlugin.startRecognize();
+
+      final filePath = await getPath('record_note', 'wav');
+      filePaths = filePath;
+      _azureTtsFlutterPlugin.startRecognize(filePath);
     } on PlatformException catch (e) {
       print(e.message);
     }
@@ -67,12 +106,12 @@ class _MyAppState extends State<MyApp> {
   Future<void> stop() async {
     try {
       // await platform.invokeMethod('startRecognize');
-      _centerText = '';
-      finalResult = '';
+      print('change your name information online demoooooo');
       _azureTtsFlutterPlugin.stopRecognize();
     } on PlatformException catch (e) {
       print(e.message);
     }
+    test();
   }
 
   Future platformCallHandler(MethodCall call) async {
@@ -89,17 +128,17 @@ class _MyAppState extends State<MyApp> {
   }
 
   void initAzure() {
-    String key = 'xxxx';
-    String region = 'xxxxxx';
+    String key = 'xxx';
+    String region = 'xxxx';
     String lang = 'zh-CN';
     _azureTtsFlutterPlugin.init(key, region, lang);
 
     // zuckjet code
     _azureTtsFlutterPlugin.setRecognitionResultHandler((text) {
+      finalResult += text;
       print('result handler handler 9999999999999');
       print(text);
       print(finalResult);
-      finalResult += text;
       setState(() {
         _centerText = finalResult;
       });

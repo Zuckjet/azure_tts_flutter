@@ -9,8 +9,8 @@ class AzureTtsFlutter {
     AzureTtsFlutterPlatform.instance.init(key, region, lang);
   }
 
-  void startRecognize() {
-    AzureTtsFlutterPlatform.instance.startRecognize();
+  void startRecognize(String filePath) {
+    AzureTtsFlutterPlatform.instance.startRecognize(filePath);
   }
 
   void stopRecognize() {

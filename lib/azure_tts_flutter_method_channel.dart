@@ -79,11 +79,12 @@ class MethodChannelAzureTtsFlutter extends AzureTtsFlutterPlatform {
   }
 
   @override
-  void startRecognize() {
+  void startRecognize(String filePath) {
     methodChannel.invokeMethod('startRecognize', {
       'key': _key,
       'region': _region,
       'lang': _lang,
+      'filePath': filePath,
     });
   }
 

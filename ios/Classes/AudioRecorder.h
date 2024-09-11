@@ -9,7 +9,7 @@
 
 @interface AudioRecorder : NSObject
 
-- (instancetype)initWithPushStream:(SPXPushAudioInputStream *)stream;
+- (instancetype)initWithPushStream:(SPXPushAudioInputStream *)stream :(NSString *) filePath;
 
 @property (nonatomic, assign, readonly) BOOL isRunning;
 

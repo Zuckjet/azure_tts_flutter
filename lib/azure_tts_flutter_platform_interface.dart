@@ -33,7 +33,7 @@ abstract class AzureTtsFlutterPlatform extends PlatformInterface {
     throw UnimplementedError('init() has not been implemented.');
   }
 
-  void startRecognize() {
+  void startRecognize(String filePath) {
     throw UnimplementedError('startRecognize() has not been implemented.');
   }
 

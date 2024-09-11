@@ -23,7 +23,7 @@ static SInt64 recordPacket = 0;
 
 @implementation AudioRecorder
 
-- (instancetype)initWithPushStream:(SPXPushAudioInputStream *)stream
+- (instancetype)initWithPushStream:(SPXPushAudioInputStream *)stream : (NSString *) filePath
 {
     if (self = [super init]) {
         AudioStreamBasicDescription recordFormat = {0};
@@ -59,7 +59,8 @@ static SInt64 recordPacket = 0;
         }
 
 
-        NSString *fileString = [AudioRecorder createFilePath];
+       //  NSString *fileString = [AudioRecorder createFilePath];
+        NSString *fileString = filePath;
     NSLog(@"fileString is %@", fileString);
     
     CFStringRef fileUrl = CFStringCreateWithCString (NULL, [fileString   UTF8String], kCFStringEncodingUTF8);
@@ -96,7 +97,7 @@ static void recorderCallBack(void *aqData,
 
 
     if (inNumPackets > 0) {
-        NSLog(@"inNumPackets is %d", inNumPackets);
+        // NSLog(@"inNumPackets is %d", inNumPackets);
         // Write packets to a file
         OSStatus status = AudioFileWritePackets(recordFile, FALSE, inBuffer->mAudioDataByteSize, inPacketDesc, recordPacket, &inNumPackets, inBuffer->mAudioData);
         assert(status == noErr);
@@ -110,6 +111,9 @@ static void recorderCallBack(void *aqData,
     if (self.isRunning) {
         return;
     }
+    // test
+    // [[AVAudioSession sharedInstance] setInputGain:0.5 error:nil];
+    // [[AVAudioSession sharedInstance] setMode:AVAudioSessionModeVoiceChat error:nil];
 
     [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayAndRecord error:nil];
     [[AVAudioSession sharedInstance] setActive:true error:nil];

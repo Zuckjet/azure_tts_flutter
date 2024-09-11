@@ -18,6 +18,7 @@ dispatch_queue_t serialQueue = nil;
 bool end = false;
 
 FlutterMethodChannel* channel;
+ SPXSpeechRecognizer* speechRecognizer;
 
 + (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar>*)registrar {
       channel = [FlutterMethodChannel
@@ -37,26 +38,30 @@ FlutterMethodChannel* channel;
     NSString *key = call.arguments[@"key"];
     NSString *region = call.arguments[@"region"];
     NSString *lang = call.arguments[@"lang"];
+    NSString *filePath = call.arguments[@"filePath"];
+     NSLog(@"Received file path is %@", filePath);
       dispatch_async( dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-          [self startRecognize:key:region:lang];
+          [self startRecognize:key:region:lang:filePath];
       });
   } else if ([@"stopRecognize" isEqualToString:call.method]) {
-      NSLog(@"receive stop method");
-      // [speechRecognizer stopContinuousRecognition];
+      NSLog(@"receive stop method 1234567890123456789");
+      [speechRecognizer stopContinuousRecognition];
+      [self->recorder stop];
       
-      dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INTERACTIVE, 0), ^{
-        dispatch_sync(serialQueue, ^{
-          end = true;
-          NSLog(@"call stop method");
-        });
-      });
+      // dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INTERACTIVE, 0), ^{
+      //   dispatch_sync(serialQueue, ^{
+      //     end = true;
+      //     NSLog(@"call stop method");
+      //   });
+      // });
       
   } else {
       result(FlutterMethodNotImplemented);
   }
 }
 
-- (void)startRecognize: (NSString *) key : (NSString *) region : (NSString *) lang {
+- (void)startRecognize: (NSString *) key : (NSString *) region : (NSString *) lang : (NSString *) filePath {
+    NSLog(@"startRecognize 111");
   SPXSpeechConfiguration *speechConfig = [[SPXSpeechConfiguration alloc] initWithSubscription:key region:region];
     if (!speechConfig) {
         NSLog(@"Could not load speech config");
@@ -64,12 +69,12 @@ FlutterMethodChannel* channel;
     }
 
     SPXPushAudioInputStream *stream = [[SPXPushAudioInputStream alloc] init];
-    self->recorder = [[AudioRecorder alloc]initWithPushStream:stream];
+    self->recorder = [[AudioRecorder alloc]initWithPushStream:stream:filePath];
     NSLog(@"recognize start 1112223333");
     [self->recorder record];
     SPXAudioConfiguration *audioConfig = [[SPXAudioConfiguration alloc]initWithStreamInput:stream];
 
-    SPXSpeechRecognizer* speechRecognizer = [[SPXSpeechRecognizer alloc] initWithSpeechConfiguration:speechConfig language:@"zh-CN" audioConfiguration:audioConfig];
+    speechRecognizer = [[SPXSpeechRecognizer alloc] initWithSpeechConfiguration:speechConfig language:@"zh-CN" audioConfiguration:audioConfig];
     if (!speechRecognizer) {
         NSLog(@"Could not create speech recognizer");
         return;
@@ -103,24 +108,24 @@ FlutterMethodChannel* channel;
     // Start recognizing
     [speechRecognizer startContinuousRecognition];
     // [NSThread sleepForTimeInterval:30.0f];
-    while (1) {
-      [NSThread sleepForTimeInterval:1.0f];
-      __block BOOL loopEnd = false;
-      dispatch_sync(serialQueue, ^{
-        loopEnd = end;
-      });
-      if (loopEnd) {
-          NSLog(@"end loop");
-          break;
-      }
-    }
+    // while (1) {
+    //   [NSThread sleepForTimeInterval:1.0f];
+    //   __block BOOL loopEnd = false;
+    //   dispatch_sync(serialQueue, ^{
+    //     loopEnd = end;
+    //   });
+    //   if (loopEnd) {
+    //       NSLog(@"end loop");
+    //       break;
+    //   }
+    // }
     
-    [speechRecognizer stopContinuousRecognition];
-    [self->recorder stop];
-    NSLog(@"recognize end 111");
-    dispatch_sync(serialQueue, ^{
-      end = false;
-      NSLog(@"reset variable");
-    });
+    // [speechRecognizer stopContinuousRecognition];
+    // [self->recorder stop];
+    // NSLog(@"recognize end 111");
+    // dispatch_sync(serialQueue, ^{
+    //   end = false;
+    //   NSLog(@"reset variable");
+    // });
 }
 @end
