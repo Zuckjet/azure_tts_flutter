@@ -74,7 +74,10 @@ FlutterMethodChannel* channel;
     [self->recorder record];
     SPXAudioConfiguration *audioConfig = [[SPXAudioConfiguration alloc]initWithStreamInput:stream];
 
-    speechRecognizer = [[SPXSpeechRecognizer alloc] initWithSpeechConfiguration:speechConfig audioConfiguration:audioConfig];
+    NSArray *languagess = @[@"zh-CN", @"en-US", @"ja-JP", @"de-DE"];
+    SPXAutoDetectSourceLanguageConfiguration* autoDetectSourceLanguageConfig = [[SPXAutoDetectSourceLanguageConfiguration alloc]init:languagess];
+
+    speechRecognizer = [[SPXSpeechRecognizer alloc] initWithSpeechConfiguration:speechConfig autoDetectSourceLanguageConfiguration:autoDetectSourceLanguageConfig audioConfiguration:audioConfig];
     if (!speechRecognizer) {
         NSLog(@"Could not create speech recognizer");
         return;
