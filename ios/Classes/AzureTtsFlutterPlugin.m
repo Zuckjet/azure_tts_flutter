@@ -132,13 +132,22 @@ SPXSpeechRecognizer *speechRecognizer;
   }];
 
   // Session stopped callback to recognize stream has ended
-  [speechRecognizer
-      addSessionStoppedEventHandler:^(SPXRecognizer *recognizer,
-                                      SPXSessionEventArgs *eventArgs) {
-        NSLog(@"Received session stopped event. SessionId: %@",
-              eventArgs.sessionId);
-        end = true;
-      }];
+  [speechRecognizer addSessionStoppedEventHandler:^(
+                        SPXRecognizer *recognizer,
+                        SPXSessionEventArgs *eventArgs) {
+    NSLog(@"Received session stopped event. SessionId: %@",
+          eventArgs.sessionId);
+    end = true;
+
+    dispatch_async(dispatch_get_main_queue(), ^{
+      [channel
+          invokeMethod:@"speech.onSessionStopped"
+             arguments:eventArgs.sessionId
+                result:^(id _Nullable result){
+                    // You can handle the response from Flutter side if needed
+                }];
+    });
+  }];
 
   // Start recognizing
   [speechRecognizer startContinuousRecognition];

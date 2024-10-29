@@ -24,4 +24,8 @@ class AzureTtsFlutter {
   void setRecognizingHandler(StringResultHandler handler) {
     AzureTtsFlutterPlatform.instance.setRecognizingHandler(handler);
   }
+
+  void setSessionStoppedHandler(StringResultHandler handler) {
+    AzureTtsFlutterPlatform.instance.setSessionStoppedHandler(handler);
+  }
 }

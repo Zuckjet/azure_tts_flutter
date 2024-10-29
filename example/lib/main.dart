@@ -111,7 +111,7 @@ class _MyAppState extends State<MyApp> {
     } on PlatformException catch (e) {
       print(e.message);
     }
-    test();
+    // test();
   }
 
   Future platformCallHandler(MethodCall call) async {
@@ -135,22 +135,20 @@ class _MyAppState extends State<MyApp> {
 
     // zuckjet code
     _azureTtsFlutterPlugin.setRecognitionResultHandler((text) {
-      finalResult += text;
-      print('result handler handler 9999999999999');
-      print(text);
-      print(finalResult);
       setState(() {
         _centerText = finalResult;
       });
     });
 
     _azureTtsFlutterPlugin.setRecognizingHandler((text) {
-      print('ing ing ing ing ing 8888888888888');
-      print(text);
-      print(finalResult);
       setState(() {
         _centerText = finalResult + text;
       });
+    });
+
+    _azureTtsFlutterPlugin.setSessionStoppedHandler((text) {
+      print(text);
+      print('log sesstion stop event');
     });
   }
 

@@ -37,10 +37,12 @@ class MethodChannelAzureTtsFlutter extends AzureTtsFlutterPlatform {
   StringResultHandler? exceptionHandler;
   StringResultHandler? recognitionResultHandler;
   StringResultHandler? recognizingHandler;
+  StringResultHandler? sessionStoppedHandler;
   StringResultHandler? assessmentResultHandler;
   VoidCallback? recognitionStartedHandler;
   VoidCallback? startRecognitionHandler;
   VoidCallback? recognitionStoppedHandler;
+  // VoidCallback? sessionStoppedHandler;
 
   @override
   void setRecognitionResultHandler(StringResultHandler handler) =>
@@ -50,6 +52,10 @@ class MethodChannelAzureTtsFlutter extends AzureTtsFlutterPlatform {
   void setRecognizingHandler(StringResultHandler handler) =>
       recognizingHandler = handler;
 
+  @override
+  void setSessionStoppedHandler(StringResultHandler handler) =>
+      sessionStoppedHandler = handler;
+
   Future _platformCallHandler(MethodCall call) async {
     switch (call.method) {
       case "speech.onRecognitionStarted":
@@ -57,6 +63,9 @@ class MethodChannelAzureTtsFlutter extends AzureTtsFlutterPlatform {
         break;
       case "speech.onResult":
         recognitionResultHandler!(call.arguments);
+        break;
+      case "speech.onSessionStopped":
+        sessionStoppedHandler!(call.arguments);
         break;
       case "speech.onRecognizing":
         recognizingHandler!(call.arguments);

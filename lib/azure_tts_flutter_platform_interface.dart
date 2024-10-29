@@ -48,4 +48,9 @@ abstract class AzureTtsFlutterPlatform extends PlatformInterface {
   void setRecognizingHandler(StringResultHandler handler) {
     throw UnimplementedError('startRecognize() has not been implemented.');
   }
+
+  void setSessionStoppedHandler(StringResultHandler handler) {
+    throw UnimplementedError(
+        'setSessionStoppedHandler() has not been implemented.');
+  }
 }
