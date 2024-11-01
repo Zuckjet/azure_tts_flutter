@@ -115,7 +115,7 @@ static void recorderCallBack(void *aqData,
     // [[AVAudioSession sharedInstance] setInputGain:0.5 error:nil];
     // [[AVAudioSession sharedInstance] setMode:AVAudioSessionModeVoiceChat error:nil];
 
-    [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayAndRecord withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker | AVAudioSessionCategoryOptionAllowBluetoothA2DP  error:nil];
+    [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayAndRecord withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker | AVAudioSessionCategoryOptionAllowBluetooth  error:nil];
     [[AVAudioSession sharedInstance] setActive:true error:nil];
 
     OSStatus status = AudioQueueStart(queueRef, NULL);
