@@ -37,6 +37,11 @@ abstract class AzureTtsFlutterPlatform extends PlatformInterface {
     throw UnimplementedError('startRecognize() has not been implemented.');
   }
 
+  void startRecognizeWithFile(String filePath) {
+    throw UnimplementedError(
+        'startRecognizeWithFile() has not been implemented.');
+  }
+
   void stopRecognize() {
     throw UnimplementedError('stopRecognize() has not been implemented.');
   }
@@ -52,5 +57,15 @@ abstract class AzureTtsFlutterPlatform extends PlatformInterface {
   void setSessionStoppedHandler(StringResultHandler handler) {
     throw UnimplementedError(
         'setSessionStoppedHandler() has not been implemented.');
+  }
+
+  void setRecognitionFileResultHandler(StringResultHandler handler) {
+    throw UnimplementedError(
+        'setRecognitionFileResultHandler() has not been implemented.');
+  }
+
+  void setRecognitionFileStopHandler(StringResultHandler handler) {
+    throw UnimplementedError(
+        'setRecognitionFileStopHandler() has not been implemented.');
   }
 }

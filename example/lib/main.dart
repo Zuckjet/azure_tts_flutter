@@ -128,8 +128,8 @@ class _MyAppState extends State<MyApp> {
   }
 
   void initAzure() {
-    String key = 'xxx';
-    String region = 'xxxx';
+    String key = 'xx';
+    String region = 'xx';
     String lang = 'zh-CN';
     _azureTtsFlutterPlugin.init(key, region, lang);
 
@@ -150,6 +150,18 @@ class _MyAppState extends State<MyApp> {
       print(text);
       print('log sesstion stop event');
     });
+
+    _azureTtsFlutterPlugin.setRecognitionFileResultHandler((text) {
+      print('file result: $text');
+    });
+
+    _azureTtsFlutterPlugin.setRecognitionFileStopHandler((text) {
+      print('file stop: $text');
+    });
+  }
+
+  recognizeWithFile() async {
+    _azureTtsFlutterPlugin.startRecognizeWithFile('filepath');
   }
 
   @override
@@ -180,6 +192,10 @@ class _MyAppState extends State<MyApp> {
               ),
               Container(
                 height: 80,
+              ),
+              ElevatedButton(
+                onPressed: recognizeWithFile,
+                child: const Text('file'),
               ),
             ],
           ),

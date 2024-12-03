@@ -43,6 +43,8 @@ class MethodChannelAzureTtsFlutter extends AzureTtsFlutterPlatform {
   VoidCallback? startRecognitionHandler;
   VoidCallback? recognitionStoppedHandler;
   // VoidCallback? sessionStoppedHandler;
+  StringResultHandler? recognitionFileResultHandler;
+  StringResultHandler? recognitionFileStopHandler;
 
   @override
   void setRecognitionResultHandler(StringResultHandler handler) =>
@@ -55,6 +57,14 @@ class MethodChannelAzureTtsFlutter extends AzureTtsFlutterPlatform {
   @override
   void setSessionStoppedHandler(StringResultHandler handler) =>
       sessionStoppedHandler = handler;
+
+  @override
+  void setRecognitionFileResultHandler(StringResultHandler handler) =>
+      recognitionFileResultHandler = handler;
+
+  @override
+  setRecognitionFileStopHandler(StringResultHandler handler) =>
+      recognitionFileStopHandler = handler;
 
   Future _platformCallHandler(MethodCall call) async {
     switch (call.method) {
@@ -79,6 +89,12 @@ class MethodChannelAzureTtsFlutter extends AzureTtsFlutterPlatform {
       case "speech.onRecognitionStopped":
         recognitionStoppedHandler!();
         break;
+      case "recognizeFile.onResult":
+        recognitionFileResultHandler!(call.arguments);
+        break;
+      case "recognizeFile.onStop":
+        recognitionFileStopHandler!(call.arguments);
+        break;
       case "speech.onException":
         exceptionHandler!(call.arguments);
         break;
@@ -100,5 +116,15 @@ class MethodChannelAzureTtsFlutter extends AzureTtsFlutterPlatform {
   @override
   void stopRecognize() {
     methodChannel.invokeMethod('stopRecognize');
+  }
+
+  @override
+  void startRecognizeWithFile(String filePath) {
+    methodChannel.invokeMethod('startRecognizeWithFile', {
+      'key': _key,
+      'region': _region,
+      'lang': _lang,
+      'filePath': filePath,
+    });
   }
 }

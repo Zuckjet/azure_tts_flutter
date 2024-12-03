@@ -13,6 +13,10 @@ class AzureTtsFlutter {
     AzureTtsFlutterPlatform.instance.startRecognize(filePath);
   }
 
+  void startRecognizeWithFile(String filePath) {
+    AzureTtsFlutterPlatform.instance.startRecognizeWithFile(filePath);
+  }
+
   void stopRecognize() {
     AzureTtsFlutterPlatform.instance.stopRecognize();
   }
@@ -27,5 +31,13 @@ class AzureTtsFlutter {
 
   void setSessionStoppedHandler(StringResultHandler handler) {
     AzureTtsFlutterPlatform.instance.setSessionStoppedHandler(handler);
+  }
+
+  void setRecognitionFileResultHandler(StringResultHandler handler) {
+    AzureTtsFlutterPlatform.instance.setRecognitionFileResultHandler(handler);
+  }
+
+  void setRecognitionFileStopHandler(StringResultHandler handler) {
+    AzureTtsFlutterPlatform.instance.setRecognitionFileStopHandler(handler);
   }
 }
