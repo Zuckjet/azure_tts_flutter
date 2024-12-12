@@ -5,6 +5,10 @@ class AzureTtsFlutter {
     return AzureTtsFlutterPlatform.instance.getPlatformVersion();
   }
 
+  Future<String?> getBluetoothDevices() {
+    return AzureTtsFlutterPlatform.instance.getBluetoothDevices();
+  }
+
   void init(String key, String region, String lang) {
     AzureTtsFlutterPlatform.instance.init(key, region, lang);
   }

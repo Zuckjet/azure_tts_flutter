@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:path_provider/path_provider.dart';
@@ -100,6 +102,27 @@ class _MyAppState extends State<MyApp> {
       _azureTtsFlutterPlugin.startRecognize(filePath);
     } on PlatformException catch (e) {
       print(e.message);
+    }
+
+    await Future.delayed(const Duration(seconds: 3));
+    String? a;
+    try {
+      a = await _azureTtsFlutterPlugin.getBluetoothDevices();
+    } catch (e) {
+      // ...
+    }
+
+    if (a != null) {
+      final List<dynamic> jsonArray = jsonDecode(a);
+      var b = jsonArray.map((map) => Map<String, String>.from(map)).toList();
+
+      for (var person in b) {
+        print('name: ${person['portName']}, type: ${person['portType']}');
+      }
+
+      if (b.isNotEmpty) {
+        print('b is not empty');
+      }
     }
   }
 

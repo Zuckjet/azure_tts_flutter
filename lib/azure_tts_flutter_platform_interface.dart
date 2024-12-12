@@ -29,6 +29,10 @@ abstract class AzureTtsFlutterPlatform extends PlatformInterface {
     throw UnimplementedError('platformVersion() has not been implemented.');
   }
 
+  Future<String?> getBluetoothDevices() {
+    throw UnimplementedError('getBluetoothDevices() has not been implemented.');
+  }
+
   void init(String key, String region, String lang) {
     throw UnimplementedError('init() has not been implemented.');
   }

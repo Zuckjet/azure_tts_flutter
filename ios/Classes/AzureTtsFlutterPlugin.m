@@ -33,7 +33,10 @@ SPXSpeechRecognizer *speechRecognizer;
   if ([@"getPlatformVersion" isEqualToString:call.method]) {
     result([@"iOS "
         stringByAppendingString:[[UIDevice currentDevice] systemVersion]]);
-  } else if ([@"startRecognize" isEqualToString:call.method]) {
+  } else if ([@"getBluetoothDevices" isEqualToString:call.method]) {
+    result([self getBluetoothDevices]);
+  }
+  else if ([@"startRecognize" isEqualToString:call.method]) {
     NSLog(@"call method in oc");
     NSString *key = call.arguments[@"key"];
     NSString *region = call.arguments[@"region"];
@@ -375,5 +378,29 @@ SPXSpeechRecognizer *speechRecognizer;
                   // You can handle the response from Flutter side if needed
               }];
   });
+}
+
+- (NSString *)getBluetoothDevices {
+    NSMutableArray<NSDictionary *> *bluetoothDevices = [NSMutableArray array];
+    NSArray *availInputs = [[AVAudioSession sharedInstance] availableInputs];
+    
+    for (AVAudioSessionPortDescription *input in availInputs) {
+        NSString *portType = input.portType;
+        if ([portType isEqualToString:AVAudioSessionPortBluetoothA2DP] ||
+            [portType isEqualToString:AVAudioSessionPortBluetoothHFP] ||
+            [portType isEqualToString:AVAudioSessionPortBluetoothLE]) {
+            NSLog(@"portType is %@", portType);
+            [bluetoothDevices addObject:@{@"portName": input.portName, @"portType": portType}];
+        }
+    }
+
+    NSError *error = nil;
+    NSData *jsonData = [NSJSONSerialization dataWithJSONObject:bluetoothDevices options:0 error:&error];
+    if (error) {
+        NSLog(@"Error serializing JSON: %@", error.localizedDescription);
+        return nil;
+    }
+    NSString *jsonString = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
+    return jsonString;
 }
 @end

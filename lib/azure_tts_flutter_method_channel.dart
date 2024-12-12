@@ -11,13 +11,6 @@ class MethodChannelAzureTtsFlutter extends AzureTtsFlutterPlatform {
   @visibleForTesting
   final methodChannel = const MethodChannel('azure_tts_flutter');
 
-  @override
-  Future<String?> getPlatformVersion() async {
-    final version =
-        await methodChannel.invokeMethod<String>('getPlatformVersion');
-    return version;
-  }
-
   // zuckjet online demo
   static String? _key;
   static String? _region;
@@ -45,6 +38,20 @@ class MethodChannelAzureTtsFlutter extends AzureTtsFlutterPlatform {
   // VoidCallback? sessionStoppedHandler;
   StringResultHandler? recognitionFileResultHandler;
   StringResultHandler? recognitionFileStopHandler;
+
+  @override
+  Future<String?> getPlatformVersion() async {
+    final version =
+        await methodChannel.invokeMethod<String>('getPlatformVersion');
+    return version;
+  }
+
+  @override
+  Future<String?> getBluetoothDevices() async {
+    final devices =
+        await methodChannel.invokeMethod<String>('getBluetoothDevices');
+    return devices;
+  }
 
   @override
   void setRecognitionResultHandler(StringResultHandler handler) =>
