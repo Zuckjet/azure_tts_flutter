@@ -383,14 +383,38 @@ SPXSpeechRecognizer *speechRecognizer;
 - (NSString *)getBluetoothDevices {
     NSMutableArray<NSDictionary *> *bluetoothDevices = [NSMutableArray array];
     NSArray *availInputs = [[AVAudioSession sharedInstance] availableInputs];
+    NSArray *headphoneKeywords = @[
+        @"airpods",
+        @"buds",
+        @"headphone",
+        @"headphones",
+        @"earphone",
+        @"earphones",
+        @"earpods",
+        @"tws",
+        @"freestyle",
+        @"freebuds",
+        @"powerbeats",
+        @"beats",
+        @"jabra",
+        @"sony",
+        @"bose",
+        @"audio"
+    ];
     
     for (AVAudioSessionPortDescription *input in availInputs) {
         NSString *portType = input.portType;
-        if ([portType isEqualToString:AVAudioSessionPortBluetoothA2DP] ||
-            [portType isEqualToString:AVAudioSessionPortBluetoothHFP] ||
-            [portType isEqualToString:AVAudioSessionPortBluetoothLE]) {
-            NSLog(@"portType is %@", portType);
-            [bluetoothDevices addObject:@{@"portName": input.portName, @"portType": portType}];
+        NSString *portName = input.portName;
+        NSString *portNameLowcase = input.portName.lowercaseString;
+
+        if ([portType isEqualToString:AVAudioSessionPortBluetoothHFP]) {
+            for (NSString *keyword in headphoneKeywords) {
+                    if ([portNameLowcase containsString:keyword.lowercaseString]) {
+                        [bluetoothDevices addObject:@{@"portName": portName, @"portType": portType}];
+                        break;
+                    }
+                }
+            
         }
     }
 
