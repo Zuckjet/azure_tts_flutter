@@ -35,31 +35,21 @@ SPXSpeechRecognizer *speechRecognizer;
         stringByAppendingString:[[UIDevice currentDevice] systemVersion]]);
   } else if ([@"getBluetoothDevices" isEqualToString:call.method]) {
     result([self getBluetoothDevices]);
-  }
-  else if ([@"startRecognize" isEqualToString:call.method]) {
-    NSLog(@"call method in oc");
+  } else if ([@"startRecognize" isEqualToString:call.method]) {
     NSString *key = call.arguments[@"key"];
     NSString *region = call.arguments[@"region"];
     NSString *lang = call.arguments[@"lang"];
     NSString *filePath = call.arguments[@"filePath"];
-    NSLog(@"Received file path is %@", filePath);
     dispatch_async(
         dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
           [self startRecognize:key:region:lang:filePath];
         });
   } else if ([@"stopRecognize" isEqualToString:call.method]) {
-    NSLog(@"receive stop method 1234567890123456789");
-    [speechRecognizer stopContinuousRecognition];
-    [self->recorder stop];
-
-    // dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INTERACTIVE, 0),
-    // ^{
-    //   dispatch_sync(serialQueue, ^{
-    //     end = true;
-    //     NSLog(@"call stop method");
-    //   });
-    // });
-
+    dispatch_async(
+        dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+          [speechRecognizer stopContinuousRecognition];
+          [self->recorder stop];
+        });
   } else if ([@"startRecognizeWithFile" isEqualToString:call.method]) {
     NSLog(@"call method in oc");
     NSString *key = call.arguments[@"key"];
@@ -85,13 +75,11 @@ SPXSpeechRecognizer *speechRecognizer;
   SPXSpeechConfiguration *speechConfig =
       [[SPXSpeechConfiguration alloc] initWithSubscription:key region:region];
   if (!speechConfig) {
-    NSLog(@"Could not load speech config");
     return;
   }
 
   SPXPushAudioInputStream *stream = [[SPXPushAudioInputStream alloc] init];
   self->recorder = [[AudioRecorder alloc] initWithPushStream:stream:filePath];
-  NSLog(@"recognize start 1112223333");
   [self->recorder record];
   SPXAudioConfiguration *audioConfig =
       [[SPXAudioConfiguration alloc] initWithStreamInput:stream];
@@ -105,7 +93,6 @@ SPXSpeechRecognizer *speechRecognizer;
       autoDetectSourceLanguageConfiguration:autoDetectSourceLanguageConfig
                          audioConfiguration:audioConfig];
   if (!speechRecognizer) {
-    NSLog(@"Could not create speech recognizer");
     return;
   }
   // [self->recorder record];
@@ -166,26 +153,6 @@ SPXSpeechRecognizer *speechRecognizer;
 
   // Start recognizing
   [speechRecognizer startContinuousRecognition];
-  // [NSThread sleepForTimeInterval:30.0f];
-  // while (1) {
-  //   [NSThread sleepForTimeInterval:1.0f];
-  //   __block BOOL loopEnd = false;
-  //   dispatch_sync(serialQueue, ^{
-  //     loopEnd = end;
-  //   });
-  //   if (loopEnd) {
-  //       NSLog(@"end loop");
-  //       break;
-  //   }
-  // }
-
-  // [speechRecognizer stopContinuousRecognition];
-  // [self->recorder stop];
-  // NSLog(@"recognize end 111");
-  // dispatch_sync(serialQueue, ^{
-  //   end = false;
-  //   NSLog(@"reset variable");
-  // });
 }
 
 - (void)startRecognizeWithFiles:(NSString *)
@@ -225,20 +192,12 @@ SPXSpeechRecognizer *speechRecognizer;
   }
 }
 
-// recognize with file ==================  xxxxxxxxxxxxxxxxxxxxxx
 - (void)startRecognizeWithFile:(NSString *)
                            key:(NSString *)region
                               :(NSString *)lang
                               :(NSString *)filePath {
 
   NSBundle *mainBundle = [NSBundle mainBundle];
-  // NSString *weatherFile =
-  //     [mainBundle pathForResource:@"record_note_1732892989947" ofType:@"wav"];
-  // NSLog(@"weatherFile path: %@", weatherFile);
-  // if (!weatherFile) {
-  //   NSLog(@"Cannot find audio file!");
-  //   return;
-  // }
 
   NSURL *targetUrl = [NSURL URLWithString:filePath];
   NSError *error = nil;
@@ -297,23 +256,11 @@ SPXSpeechRecognizer *speechRecognizer;
   [speechRecognizer
       addRecognizingEventHandler:^(SPXSpeechRecognizer *recognizer,
                                    SPXSpeechRecognitionEventArgs *eventArgs){
-          // NSLog(@"Received intermediate result event. SessionId: %@,
-          // recognition result:%@. Status %ld. offset %llu duration %llu
-          // resultid:%@", eventArgs.sessionId, eventArgs.result.text,
-          // (long)eventArgs.result.reason, eventArgs.result.offset,
-          // eventArgs.result.duration, eventArgs.result.resultId);
-          // [self updateRecognitionStatusText:eventArgs.result.text];
       }];
 
   [speechRecognizer addRecognizedEventHandler:^(
                         SPXSpeechRecognizer *recognizer,
                         SPXSpeechRecognitionEventArgs *eventArgs) {
-    // NSLog(@"Received final result event. SessionId: %@, recognition
-    // result:%@. Status %ld. offset %llu duration %llu resultid:%@",
-    // eventArgs.sessionId, eventArgs.result.text,
-    // (long)eventArgs.result.reason, eventArgs.result.offset,
-    // eventArgs.result.duration, eventArgs.result.resultId); [self
-    // updateRecognitionResultText:eventArgs.result.text];
     dispatch_async(dispatch_get_main_queue(), ^{
       [channel
           invokeMethod:@"recognizeFile.onResult"
@@ -381,50 +328,40 @@ SPXSpeechRecognizer *speechRecognizer;
 }
 
 - (NSString *)getBluetoothDevices {
-    NSMutableArray<NSDictionary *> *bluetoothDevices = [NSMutableArray array];
-    NSArray *availInputs = [[AVAudioSession sharedInstance] availableInputs];
-    NSArray *headphoneKeywords = @[
-        @"airpods",
-        @"buds",
-        @"headphone",
-        @"headphones",
-        @"earphone",
-        @"earphones",
-        @"earpods",
-        @"tws",
-        @"freestyle",
-        @"freebuds",
-        @"powerbeats",
-        @"beats",
-        @"jabra",
-        @"sony",
-        @"bose",
-        @"audio"
-    ];
-    
-    for (AVAudioSessionPortDescription *input in availInputs) {
-        NSString *portType = input.portType;
-        NSString *portName = input.portName;
-        NSString *portNameLowcase = input.portName.lowercaseString;
+  NSMutableArray<NSDictionary *> *bluetoothDevices = [NSMutableArray array];
+  NSArray *availInputs = [[AVAudioSession sharedInstance] availableInputs];
+  NSArray *headphoneKeywords = @[
+    @"airpods", @"buds", @"headphone", @"headphones", @"earphone", @"earphones",
+    @"earpods", @"tws", @"freestyle", @"freebuds", @"powerbeats", @"beats",
+    @"jabra", @"sony", @"bose", @"audio"
+  ];
 
-        if ([portType isEqualToString:AVAudioSessionPortBluetoothHFP]) {
-            for (NSString *keyword in headphoneKeywords) {
-                    if ([portNameLowcase containsString:keyword.lowercaseString]) {
-                        [bluetoothDevices addObject:@{@"portName": portName, @"portType": portType}];
-                        break;
-                    }
-                }
-            
+  for (AVAudioSessionPortDescription *input in availInputs) {
+    NSString *portType = input.portType;
+    NSString *portName = input.portName;
+    NSString *portNameLowcase = input.portName.lowercaseString;
+
+    if ([portType isEqualToString:AVAudioSessionPortBluetoothHFP]) {
+      for (NSString *keyword in headphoneKeywords) {
+        if ([portNameLowcase containsString:keyword.lowercaseString]) {
+          [bluetoothDevices
+              addObject:@{@"portName" : portName, @"portType" : portType}];
+          break;
         }
+      }
     }
+  }
 
-    NSError *error = nil;
-    NSData *jsonData = [NSJSONSerialization dataWithJSONObject:bluetoothDevices options:0 error:&error];
-    if (error) {
-        NSLog(@"Error serializing JSON: %@", error.localizedDescription);
-        return nil;
-    }
-    NSString *jsonString = [[NSString alloc] initWithData:jsonData encoding:NSUTF8StringEncoding];
-    return jsonString;
+  NSError *error = nil;
+  NSData *jsonData = [NSJSONSerialization dataWithJSONObject:bluetoothDevices
+                                                     options:0
+                                                       error:&error];
+  if (error) {
+    NSLog(@"Error serializing JSON: %@", error.localizedDescription);
+    return nil;
+  }
+  NSString *jsonString = [[NSString alloc] initWithData:jsonData
+                                               encoding:NSUTF8StringEncoding];
+  return jsonString;
 }
 @end
