@@ -94,14 +94,19 @@ static void recorderCallBack(void *aqData,
     if (recorder.isRunning) {
         AudioQueueEnqueueBuffer(inAQ, inBuffer, 0, NULL);
     }
-
-
+    if (recordFile == NULL) {
+        NSLog(@"record file is null");
+        return;
+    }
     if (inNumPackets > 0) {
         // NSLog(@"inNumPackets is %d", inNumPackets);
         // Write packets to a file
         OSStatus status = AudioFileWritePackets(recordFile, FALSE, inBuffer->mAudioDataByteSize, inPacketDesc, recordPacket, &inNumPackets, inBuffer->mAudioData);
-        assert(status == noErr);
-        
+        // assert(status == noErr);
+        if (status != noErr) {
+            NSLog(@"write packets failure");
+            return;
+        }
         // Increment packet count
         recordPacket += inNumPackets;
     }
