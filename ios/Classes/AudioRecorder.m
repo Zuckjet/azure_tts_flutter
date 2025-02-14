@@ -86,6 +86,11 @@ static void recorderCallBack(void *aqData,
                              const AudioStreamPacketDescription *inPacketDesc) {
     AudioRecorder *recorder = (__bridge AudioRecorder *)aqData;
 
+    if (!inBuffer || !inBuffer->mAudioData || inBuffer->mAudioDataByteSize == 0) {
+        NSLog(@"Invalid audio buffer");
+        return;
+    }
+
     NSData* data = [[NSData alloc] initWithBytesNoCopy:(void*)inBuffer->mAudioData
                                                 length:(NSUInteger)inBuffer->mAudioDataByteSize
                                           freeWhenDone:false];
