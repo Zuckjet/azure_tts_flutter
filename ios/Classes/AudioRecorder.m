@@ -67,6 +67,7 @@ static AudioQueueRef recordQueue = NULL;
         kCFAllocatorDefault, fileUrl, kCFURLPOSIXPathStyle, false);
     AudioFileCreateWithURL(audioFileURL, kAudioFileCAFType, &recordFormat,
                            kAudioFileFlags_EraseFile, &recordFile);
+    CFRelease(fileUrl);
     CFRelease(audioFileURL);
   }
   return self;
@@ -185,43 +186,6 @@ static void recorderCallBack(void *aqData, AudioQueueRef inAQ,
     return;
   }
 
-  // 重新创建音频文件（如果已关闭）
-  if (recordFile == NULL) {
-    AudioStreamBasicDescription recordFormat = {0};
-    recordFormat.mFormatID = kAudioFormatLinearPCM;
-    recordFormat.mSampleRate = 16000;
-    recordFormat.mChannelsPerFrame = 1;
-    recordFormat.mBitsPerChannel = 16;
-    recordFormat.mFramesPerPacket = 1;
-    recordFormat.mBytesPerFrame = recordFormat.mBytesPerPacket =
-        (recordFormat.mBitsPerChannel / 8) * recordFormat.mChannelsPerFrame;
-    recordFormat.mFormatFlags =
-        kLinearPCMFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked;
-
-    NSString *fileString = [AudioRecorder createFilePath]; // 每次创建新文件
-    NSLog(@"Creating new audio file at: %@", fileString);
-
-    CFStringRef fileUrl = CFStringCreateWithCString(
-        NULL, [fileString UTF8String], kCFStringEncodingUTF8);
-    CFURLRef audioFileURL = CFURLCreateWithFileSystemPath(
-        kCFAllocatorDefault, fileUrl, kCFURLPOSIXPathStyle, false);
-
-    OSStatus createStatus =
-        AudioFileCreateWithURL(audioFileURL, kAudioFileCAFType, &recordFormat,
-                               kAudioFileFlags_EraseFile, &recordFile);
-
-    CFRelease(fileUrl);
-    CFRelease(audioFileURL);
-
-    if (createStatus != noErr) {
-      NSLog(@"Failed to create audio file: %d", (int)createStatus);
-      return;
-    }
-
-    // 重置包计数
-    recordPacket = 0;
-  }
-
   // 启动录音队列
   OSStatus status = AudioQueueStart(queueRef, NULL);
   if (status != noErr) {
@@ -251,35 +215,6 @@ static void recorderCallBack(void *aqData, AudioQueueRef inAQ,
 
     // 重置记录变量
     recordPacket = 0;
-
-    // 重新创建音频队列，以便下次使用
-    AudioStreamBasicDescription recordFormat = {0};
-    recordFormat.mFormatID = kAudioFormatLinearPCM;
-    recordFormat.mSampleRate = 16000;
-    recordFormat.mChannelsPerFrame = 1;
-    recordFormat.mBitsPerChannel = 16;
-    recordFormat.mFramesPerPacket = 1;
-    recordFormat.mBytesPerFrame = recordFormat.mBytesPerPacket =
-        (recordFormat.mBitsPerChannel / 8) * recordFormat.mChannelsPerFrame;
-    recordFormat.mFormatFlags =
-        kLinearPCMFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked;
-
-    // 释放旧队列
-    AudioQueueDispose(queueRef, true);
-
-    // 创建新队列
-    OSStatus newStatus = AudioQueueNewInput(
-        &recordFormat, recorderCallBack, (__bridge void *)self, NULL,
-        kCFRunLoopCommonModes, 0, &queueRef);
-    if (newStatus != noErr) {
-      NSLog(@"Failed to create new audio queue: %d", (int)newStatus);
-    }
-
-    // 分配新缓冲区
-    for (int i = 0; i < kNumberBuffers; i++) {
-      AudioQueueAllocateBuffer(queueRef, 3200, &buffers[i]);
-      AudioQueueEnqueueBuffer(queueRef, buffers[i], 0, NULL);
-    }
 
     // 重置音频会话
     [[AVAudioSession sharedInstance]
