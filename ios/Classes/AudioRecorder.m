@@ -8,7 +8,6 @@
 #import <AVFoundation/AVFoundation.h>
 
 static const int kNumberBuffers = 3;
-static AudioQueueRef recordQueue = NULL;
 
 @interface AudioRecorder () {
   AudioQueueRef queueRef;
@@ -27,6 +26,14 @@ static AudioQueueRef recordQueue = NULL;
 - (instancetype)initWithPushStream:(SPXPushAudioInputStream *)
                             stream:(NSString *)filePath {
   if (self = [super init]) {
+    if (stream == nil) {
+        NSLog(@"Error: Push stream cannot be nil");
+        return nil;
+    }
+    if (filePath.length == 0) {
+        NSLog(@"Error: File path cannot be empty");
+        return nil;
+    }
     AudioStreamBasicDescription recordFormat = {0};
     recordFormat.mFormatID = kAudioFormatLinearPCM;
     recordFormat.mSampleRate = 16000;
@@ -46,15 +53,23 @@ static AudioQueueRef recordQueue = NULL;
                                          kCFRunLoopCommonModes, 0, &queueRef);
     if (status != noErr) {
       NSLog(@"new input error");
+      return nil;
     }
 
     for (int i = 0; i < kNumberBuffers; i++) {
-      AudioQueueAllocateBuffer(queueRef, 3200, &buffers[i]);
-      AudioQueueEnqueueBuffer(queueRef, buffers[i], 0, NULL);
-    }
-
-    if (status != noErr) {
-      NSLog(@"create recorder file failure");
+      status = AudioQueueAllocateBuffer(queueRef, 3200, &buffers[i]);
+      if (status != noErr) {
+          NSLog(@"Error allocating buffer %d: %d", i, (int)status);
+          AudioQueueDispose(queueRef, true); // Clean up queue if buffer allocation fails
+          queueRef = NULL;
+          return nil;
+      }
+      status = AudioQueueEnqueueBuffer(queueRef, buffers[i], 0, NULL);
+       if (status != noErr) {
+          NSLog(@"Error enqueuing buffer %d: %d", i, (int)status);
+          // Consider further cleanup or error handling if initial enqueue fails
+          return nil;
+      }
     }
 
     //  NSString *fileString = [AudioRecorder createFilePath];
@@ -63,18 +78,43 @@ static AudioQueueRef recordQueue = NULL;
 
     CFStringRef fileUrl = CFStringCreateWithCString(
         NULL, [fileString UTF8String], kCFStringEncodingUTF8);
+    if (fileUrl == NULL) {
+      NSLog(@"Error creating file URL");
+      AudioQueueDispose(queueRef, true);
+      queueRef = NULL;
+      return nil;
+    }
     CFURLRef audioFileURL = CFURLCreateWithFileSystemPath(
         kCFAllocatorDefault, fileUrl, kCFURLPOSIXPathStyle, false);
-    AudioFileCreateWithURL(audioFileURL, kAudioFileCAFType, &recordFormat,
+        if (audioFileURL == NULL) {
+    NSLog(@"Failed to create CFURL from file path");
+    CFRelease(fileUrl);
+    AudioQueueDispose(queueRef, true);
+    queueRef = NULL;
+    return nil;
+}
+    status = AudioFileCreateWithURL(audioFileURL, kAudioFileCAFType, &recordFormat,
                            kAudioFileFlags_EraseFile, &recordFile);
     CFRelease(fileUrl);
     CFRelease(audioFileURL);
+
+     if (status != noErr) {
+        NSLog(@"Error creating audio file: %d", (int)status);
+        AudioQueueDispose(queueRef, true);
+        queueRef = NULL;
+        return nil;
+    }
+
   }
   return self;
 }
 
 - (void)dealloc {
-  AudioQueueDispose(queueRef, true);
+  [self stop];
+  if (queueRef) {
+    AudioQueueDispose(queueRef, true);
+    queueRef = NULL;
+  }
 }
 
 static void recorderCallBack(void *aqData, AudioQueueRef inAQ,
@@ -200,9 +240,11 @@ static void recorderCallBack(void *aqData, AudioQueueRef inAQ,
   if (self.isRunning) {
     _isRunning = false;
     // 停止队列前检查其状态
-    OSStatus status = AudioQueueStop(queueRef, true);
-    if (status != noErr) {
-      NSLog(@"Failed to stop audio queue: %d", (int)status);
+    if (queueRef) {
+      OSStatus status = AudioQueueStop(queueRef, true);
+      if (status != noErr) {
+        NSLog(@"Failed to stop audio queue: %d", (int)status);
+      }
     }
     // 关闭音频文件
     if (recordFile != NULL) {
@@ -222,33 +264,6 @@ static void recorderCallBack(void *aqData, AudioQueueRef inAQ,
         withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation
               error:nil];
   }
-}
-
-+ (NSString *)createFilePath {
-  NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
-  dateFormatter.dateFormat = @"yyyy_MM_dd__HH_mm_ss";
-  NSString *date = [dateFormatter stringFromDate:[NSDate date]];
-
-  NSArray *searchPaths = NSSearchPathForDirectoriesInDomains(
-      NSDocumentDirectory, NSUserDomainMask, YES);
-
-  NSString *documentPath =
-      [[searchPaths objectAtIndex:0] stringByAppendingPathComponent:@"Voice"];
-
-  // 先创建子目录.
-  // 注意,若果直接调用AudioFileCreateWithURL创建一个不存在的目录创建文件会失败
-  NSFileManager *fileManager = [NSFileManager defaultManager];
-  if (![fileManager fileExistsAtPath:documentPath]) {
-    [fileManager createDirectoryAtPath:documentPath
-           withIntermediateDirectories:YES
-                            attributes:nil
-                                 error:nil];
-  }
-
-  NSString *fullFileName = [NSString stringWithFormat:@"%@.caf", date];
-  NSString *filePath =
-      [documentPath stringByAppendingPathComponent:fullFileName];
-  return filePath;
 }
 
 @end
