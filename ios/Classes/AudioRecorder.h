@@ -6,17 +6,28 @@
 #import <Foundation/Foundation.h>
 #import <MicrosoftCognitiveServicesSpeech/SPXSpeechApi.h>
 
+typedef NS_ENUM(NSInteger, RecordingInterruptionReason) {
+    RecordingInterruptionReasonUnknown = 0,
+    RecordingInterruptionReasonInvalidBuffer,
+    RecordingInterruptionReasonQueueError,
+    RecordingInterruptionReasonFileError,
+    RecordingInterruptionReasonSessionError,
+    RecordingInterruptionReasonSystemInterruption
+};
+
+@protocol AudioRecorderDelegate <NSObject>
+- (void)audioRecorderDidEncounterInterruption:(RecordingInterruptionReason)reason errorMessage:(NSString *)message;
+@end
 
 @interface AudioRecorder : NSObject
 
-- (instancetype)initWithPushStream:(SPXPushAudioInputStream *)stream :(NSString *) filePath;
+// Fix: Use proper parameter naming format with external parameter name for the second parameter
+- (instancetype)initWithPushStream:(SPXPushAudioInputStream *)stream filePath:(NSString *)filePath;
 
 @property (nonatomic, assign, readonly) BOOL isRunning;
+@property (nonatomic, weak) id<AudioRecorderDelegate> delegate;
 
 - (void)record;
-
 - (void)stop;
 
 @end
-
-

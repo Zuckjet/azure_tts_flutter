@@ -24,15 +24,15 @@ static const int kNumberBuffers = 3;
 @implementation AudioRecorder
 
 - (instancetype)initWithPushStream:(SPXPushAudioInputStream *)
-                            stream:(NSString *)filePath {
+                            stream filePath:(NSString *)filePath {
   if (self = [super init]) {
     if (stream == nil) {
-        NSLog(@"Error: Push stream cannot be nil");
-        return nil;
+      NSLog(@"Error: Push stream cannot be nil");
+      return nil;
     }
     if (filePath.length == 0) {
-        NSLog(@"Error: File path cannot be empty");
-        return nil;
+      NSLog(@"Error: File path cannot be empty");
+      return nil;
     }
     AudioStreamBasicDescription recordFormat = {0};
     recordFormat.mFormatID = kAudioFormatLinearPCM;
@@ -59,16 +59,17 @@ static const int kNumberBuffers = 3;
     for (int i = 0; i < kNumberBuffers; i++) {
       status = AudioQueueAllocateBuffer(queueRef, 3200, &buffers[i]);
       if (status != noErr) {
-          NSLog(@"Error allocating buffer %d: %d", i, (int)status);
-          AudioQueueDispose(queueRef, true); // Clean up queue if buffer allocation fails
-          queueRef = NULL;
-          return nil;
+        NSLog(@"Error allocating buffer %d: %d", i, (int)status);
+        AudioQueueDispose(queueRef,
+                          true); // Clean up queue if buffer allocation fails
+        queueRef = NULL;
+        return nil;
       }
       status = AudioQueueEnqueueBuffer(queueRef, buffers[i], 0, NULL);
-       if (status != noErr) {
-          NSLog(@"Error enqueuing buffer %d: %d", i, (int)status);
-          // Consider further cleanup or error handling if initial enqueue fails
-          return nil;
+      if (status != noErr) {
+        NSLog(@"Error enqueuing buffer %d: %d", i, (int)status);
+        // Consider further cleanup or error handling if initial enqueue fails
+        return nil;
       }
     }
 
@@ -86,34 +87,62 @@ static const int kNumberBuffers = 3;
     }
     CFURLRef audioFileURL = CFURLCreateWithFileSystemPath(
         kCFAllocatorDefault, fileUrl, kCFURLPOSIXPathStyle, false);
-        if (audioFileURL == NULL) {
-    NSLog(@"Failed to create CFURL from file path");
-    CFRelease(fileUrl);
-    AudioQueueDispose(queueRef, true);
-    queueRef = NULL;
-    return nil;
-}
-    status = AudioFileCreateWithURL(audioFileURL, kAudioFileCAFType, &recordFormat,
-                           kAudioFileFlags_EraseFile, &recordFile);
+    if (audioFileURL == NULL) {
+      NSLog(@"Failed to create CFURL from file path");
+      CFRelease(fileUrl);
+      AudioQueueDispose(queueRef, true);
+      queueRef = NULL;
+      return nil;
+    }
+    status =
+        AudioFileCreateWithURL(audioFileURL, kAudioFileCAFType, &recordFormat,
+                               kAudioFileFlags_EraseFile, &recordFile);
     CFRelease(fileUrl);
     CFRelease(audioFileURL);
 
-     if (status != noErr) {
-        NSLog(@"Error creating audio file: %d", (int)status);
-        AudioQueueDispose(queueRef, true);
-        queueRef = NULL;
-        return nil;
+    if (status != noErr) {
+      NSLog(@"Error creating audio file: %d", (int)status);
+      AudioQueueDispose(queueRef, true);
+      queueRef = NULL;
+      return nil;
     }
-
+     [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(handleAudioSessionInterruption:)
+                                                 name:AVAudioSessionInterruptionNotification
+                                               object:nil];
   }
   return self;
 }
 
 - (void)dealloc {
+  [[NSNotificationCenter defaultCenter] removeObserver:self];
   [self stop];
   if (queueRef) {
     AudioQueueDispose(queueRef, true);
     queueRef = NULL;
+  }
+}
+
+- (void)handleAudioSessionInterruption:(NSNotification *)notification {
+  NSInteger type = [notification.userInfo[AVAudioSessionInterruptionTypeKey] integerValue];
+  
+  if (type == AVAudioSessionInterruptionTypeBegan) {
+    // Report the interruption
+    [self reportInterruptionWithReason:RecordingInterruptionReasonSystemInterruption
+                          errorMessage:@"Recording interrupted by system"];
+    
+    // Stop recording if it's running
+    if (self.isRunning) {
+      [self stop];
+    }
+  }
+}
+
+- (void)reportInterruptionWithReason:(RecordingInterruptionReason)reason errorMessage:(NSString *)message {
+  if ([self.delegate respondsToSelector:@selector(audioRecorderDidEncounterInterruption:errorMessage:)]) {
+    dispatch_async(dispatch_get_main_queue(), ^{
+      [self.delegate audioRecorderDidEncounterInterruption:reason errorMessage:message];
+    });
   }
 }
 
@@ -122,9 +151,8 @@ static void recorderCallBack(void *aqData, AudioQueueRef inAQ,
                              const AudioTimeStamp *timestamp,
                              UInt32 inNumPackets,
                              const AudioStreamPacketDescription *inPacketDesc) {
+  AudioRecorder *recorder = (__bridge AudioRecorder *)aqData;
   @try {
-    AudioRecorder *recorder = (__bridge AudioRecorder *)aqData;
-
     // Check recorder validity and running state
     if (!recorder || !recorder.isRunning) {
       return;
@@ -134,12 +162,23 @@ static void recorderCallBack(void *aqData, AudioQueueRef inAQ,
     if (!inBuffer || !inBuffer->mAudioData ||
         inBuffer->mAudioDataByteSize == 0) {
       NSLog(@"Invalid audio buffer (recorder is running)");
+       [recorder reportInterruptionWithReason:RecordingInterruptionReasonInvalidBuffer
+                              errorMessage:@"Invalid audio buffer received"];
       if (recorder.isRunning) {
         OSStatus enqueueStatus =
             AudioQueueEnqueueBuffer(inAQ, inBuffer, 0, NULL);
         if (enqueueStatus != noErr) {
           NSLog(@"Error re-enqueuing invalid buffer: %d", (int)enqueueStatus);
+          [recorder reportInterruptionWithReason:RecordingInterruptionReasonQueueError
+                                  errorMessage:[NSString stringWithFormat:@"Failed to enqueue buffer: %d", (int)enqueueStatus]];
           // Consider triggering stop/error handling here as queue might stall
+          // Consider forcing stop if there's a serious queue error
+          if (enqueueStatus == kAudioQueueErr_InvalidBuffer || 
+              enqueueStatus == kAudioQueueErr_InvalidRunState) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+              [recorder stop];
+            });
+          }
         }
       }
       return;
@@ -157,12 +196,23 @@ static void recorderCallBack(void *aqData, AudioQueueRef inAQ,
       OSStatus enqueueStatus = AudioQueueEnqueueBuffer(inAQ, inBuffer, 0, NULL);
       if (enqueueStatus != noErr) {
         NSLog(@"Failed to enqueue buffer: %d", (int)enqueueStatus);
+         [recorder reportInterruptionWithReason:RecordingInterruptionReasonQueueError
+                                errorMessage:[NSString stringWithFormat:@"Failed to enqueue buffer: %d", (int)enqueueStatus]];
+        // Stop recording if critical queue error
+        if (enqueueStatus == kAudioQueueErr_InvalidBuffer || 
+            enqueueStatus == kAudioQueueErr_InvalidRunState) {
+          dispatch_async(dispatch_get_main_queue(), ^{
+            [recorder stop];
+          });
+        }
       }
     }
 
     // 检查文件句柄
     if (recorder->recordFile == NULL) {
       NSLog(@"Record file is null - skipping file write");
+       [recorder reportInterruptionWithReason:RecordingInterruptionReasonFileError
+                              errorMessage:@"Record file handle is null"];
       return;
     }
 
@@ -175,21 +225,22 @@ static void recorderCallBack(void *aqData, AudioQueueRef inAQ,
 
       if (status != noErr) {
         // 特定错误处理
+        NSString *errorMsg = @"Unknown file error";
         switch (status) {
         case kAudioFileInvalidPacketOffsetError: // -38
-          NSLog(@"Audio File Error: Invalid packet offset");
+          errorMsg = @"Audio File Error: Invalid packet offset";
           break;
         case kAudioFileUnspecifiedError:
-          NSLog(@"Audio File Error: Unspecified error");
+          errorMsg = @"Audio File Error: Unspecified error";
           break;
         case kAudioFileNotOpenError:
-          NSLog(@"Audio File Error: File not open");
+          errorMsg = @"Audio File Error: File not open";
           break;
         case kAudioFilePermissionsError:
-          NSLog(@"Audio File Error: Permission denied");
+          errorMsg = @"Audio File Error: Permission denied";
           break;
         default:
-          NSLog(@"Audio File Write Error: Status %d", (int)status);
+          errorMsg = [NSString stringWithFormat:@"Audio File Write Error: Status %d", (int)status];
           break;
         }
         return;
@@ -200,6 +251,8 @@ static void recorderCallBack(void *aqData, AudioQueueRef inAQ,
     }
   } @catch (NSException *exception) {
     NSLog(@"Exception in recorderCallBack: %@", exception);
+    [recorder reportInterruptionWithReason:RecordingInterruptionReasonUnknown
+                            errorMessage:[NSString stringWithFormat:@"Exception: %@", exception.reason]];
   }
 }
 
@@ -217,12 +270,16 @@ static void recorderCallBack(void *aqData, AudioQueueRef inAQ,
             error:&sessionError];
   if (sessionError) {
     NSLog(@"Failed to set audio session category: %@", sessionError);
+     [self reportInterruptionWithReason:RecordingInterruptionReasonSessionError
+                         errorMessage:[NSString stringWithFormat:@"Failed to set audio session: %@", sessionError.localizedDescription]];
     return;
   }
 
   [[AVAudioSession sharedInstance] setActive:true error:&sessionError];
   if (sessionError) {
     NSLog(@"Failed to activate audio session: %@", sessionError);
+     [self reportInterruptionWithReason:RecordingInterruptionReasonSessionError
+                         errorMessage:[NSString stringWithFormat:@"Failed to activate audio session: %@", sessionError.localizedDescription]];
     return;
   }
 
@@ -230,6 +287,8 @@ static void recorderCallBack(void *aqData, AudioQueueRef inAQ,
   OSStatus status = AudioQueueStart(queueRef, NULL);
   if (status != noErr) {
     NSLog(@"Failed to start audio queue: %d", (int)status);
+     [self reportInterruptionWithReason:RecordingInterruptionReasonQueueError
+                         errorMessage:[NSString stringWithFormat:@"Failed to start audio queue: %d", (int)status]];
     return;
   }
 

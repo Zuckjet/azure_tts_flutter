@@ -2,31 +2,38 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import 'azure_tts_flutter_platform_interface.dart';
+import 'recording_interrupt_event.dart';
 
 typedef void StringResultHandler(String text);
 
 /// An implementation of [AzureTtsFlutterPlatform] that uses method channels.
 class MethodChannelAzureTtsFlutter extends AzureTtsFlutterPlatform {
   /// The method channel used to interact with the native platform.
-  @visibleForTesting
-  final methodChannel = const MethodChannel('azure_tts_flutter');
+  // @visibleForTesting
+  // final _channel = const MethodChannel('azure_tts_flutter');
+  final MethodChannel _channel = const MethodChannel('azure_tts_flutter');
+  final EventChannel _eventChannel =
+      const EventChannel('azure_tts_flutter_events');
 
-  // zuckjet online demo
-  static String? _key;
-  static String? _region;
-  static String? _lang;
+  Stream<RecordingInterruptionEvent>? _recordingInterruptionStream;
+
+  @override
+  Stream<RecordingInterruptionEvent> get onRecordingInterrupted {
+    _recordingInterruptionStream ??=
+        _eventChannel.receiveBroadcastStream().where((event) {
+      return event is Map && event['event'] == 'recording_interrupted';
+    }).map((event) {
+      return RecordingInterruptionEvent.fromMap(event);
+    });
+    return _recordingInterruptionStream!;
+  }
 
   @override
   void init(String key, String region, String lang) {
-    _key = key;
-    _region = region;
-    _lang = lang;
-
-    // zuckjet
-    methodChannel.setMethodCallHandler(_platformCallHandler);
+    _channel.setMethodCallHandler(_platformCallHandler);
   }
 
-  // test zuckjet
+  // test
   StringResultHandler? exceptionHandler;
   StringResultHandler? recognitionResultHandler;
   StringResultHandler? recognizingHandler;
@@ -41,15 +48,13 @@ class MethodChannelAzureTtsFlutter extends AzureTtsFlutterPlatform {
 
   @override
   Future<String?> getPlatformVersion() async {
-    final version =
-        await methodChannel.invokeMethod<String>('getPlatformVersion');
+    final version = await _channel.invokeMethod<String>('getPlatformVersion');
     return version;
   }
 
   @override
   Future<String?> getBluetoothDevices() async {
-    final devices =
-        await methodChannel.invokeMethod<String>('getBluetoothDevices');
+    final devices = await _channel.invokeMethod<String>('getBluetoothDevices');
     return devices;
   }
 
@@ -111,27 +116,28 @@ class MethodChannelAzureTtsFlutter extends AzureTtsFlutterPlatform {
   }
 
   @override
-  void startRecognize(String filePath) {
-    methodChannel.invokeMethod('startRecognize', {
-      'key': _key,
-      'region': _region,
-      'lang': _lang,
-      'filePath': filePath,
-    });
+  Future<bool> startRecognize(
+      String key, String region, String lang, String filePath) async {
+    final result = await _channel.invokeMethod<bool>('startRecognize',
+        {'key': key, 'region': region, 'lang': lang, 'filePath': filePath});
+    return result ?? false;
   }
 
   @override
-  void stopRecognize() {
-    methodChannel.invokeMethod('stopRecognize');
+  Future<bool> stopRecognize() async {
+    final result = await _channel.invokeMethod('stopRecognize');
+    return result ?? false;
   }
 
   @override
-  void startRecognizeWithFile(String filePath) {
-    methodChannel.invokeMethod('startRecognizeWithFile', {
-      'key': _key,
-      'region': _region,
-      'lang': _lang,
+  Future<bool> startRecognizeWithFile(
+      String key, String region, String lang, String filePath) async {
+    final result = await _channel.invokeMethod('startRecognizeWithFile', {
+      'key': key,
+      'region': region,
+      'lang': lang,
       'filePath': filePath,
     });
+    return result ?? false;
   }
 }

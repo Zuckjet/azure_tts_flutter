@@ -1,190 +1,92 @@
-import 'dart:convert';
-
-import 'package:flutter/material.dart';
 import 'dart:async';
-import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as p;
-
-import 'package:flutter/services.dart';
+import 'package:flutter/material.dart';
 import 'package:azure_tts_flutter/azure_tts_flutter.dart';
+import 'package:azure_tts_flutter/recording_interrupt_event.dart';
+
+import 'package:path_provider/path_provider.dart';
 import 'dart:io';
-import 'package:audioplayers/audioplayers.dart';
 
 void main() {
   runApp(const MyApp());
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({super.key});
+  const MyApp({Key? key}) : super(key: key);
 
   @override
-  State<MyApp> createState() => _MyAppState();
+  _MyAppState createState() => _MyAppState();
 }
 
 class _MyAppState extends State<MyApp> {
-  String _platformVersion = 'Unknown';
-  final _azureTtsFlutterPlugin = AzureTtsFlutter();
+  bool _isRecording = false;
+  String _recognizedText = '';
+  String _lastError = '';
+  String _filePath = '';
 
-  String _centerText = '';
-  bool isRecognizing = false;
+  StreamSubscription<RecordingInterruptionEvent>? _interruptionSubscription;
 
-  String intermediateResult = '';
-  String finalResult = '';
-  String filePaths = '';
+  final azureTtsFlutterPlugin = AzureTtsFlutter();
 
   @override
   void initState() {
     super.initState();
-    initPlatformState();
-    initAzure();
-    // print(datas);
+    _initFilePath();
 
-    // test();
+    // Listen for recording interruptions
+    _interruptionSubscription = azureTtsFlutterPlugin.onRecordingInterrupted
+        .listen(_handleInterruption);
   }
 
-  void test() async {
-    if (!File(filePaths).existsSync()) {
-      print('file not exist');
+  Future<void> _initFilePath() async {
+    await _requestPermission();
+    final directory = await getTemporaryDirectory();
+    _filePath = '${directory.path}/recording.caf';
+  }
+
+  Future<void> _requestPermission() async {
+    // await Permission.microphone.request();
+    // await Permission.storage.request();
+  }
+
+  void _handleInterruption(RecordingInterruptionEvent event) {
+    setState(() {
+      _isRecording = false;
+      _lastError =
+          '${event.reason.toString().split('.').last} - ${event.message}';
+    });
+    // zhu
+    print(_lastError);
+    //zhu
+  }
+
+  Future<void> _toggleRecording() async {
+    if (_isRecording) {
+      await azureTtsFlutterPlugin.stopRecognize();
+      setState(() {
+        _isRecording = false;
+      });
     } else {
-      print('file exist');
-    }
-
-    await Future.delayed(const Duration(seconds: 5));
-
-    final player = AudioPlayer();
-    player.setVolume(50000);
-    await player.play(DeviceFileSource(filePaths));
-  }
-
-  Future<String> getPath(String prefix, String suffix) async {
-    final dir = await getApplicationDocumentsDirectory();
-    final fileName =
-        '${prefix}_${DateTime.now().millisecondsSinceEpoch}.$suffix';
-    return p.join(
-      dir.path,
-      fileName,
-    );
-  }
-
-  // Platform messages are asynchronous, so we initialize in an async method.
-  Future<void> initPlatformState() async {
-    String platformVersion;
-    // Platform messages may fail, so we use a try/catch PlatformException.
-    // We also handle the message potentially returning null.
-    try {
-      platformVersion = await _azureTtsFlutterPlugin.getPlatformVersion() ??
-          'Unknown platform version';
-    } on PlatformException {
-      platformVersion = 'Failed to get platform version.';
-    }
-
-    // If the widget was removed from the tree while the asynchronous platform
-    // message was in flight, we want to discard the reply rather than calling
-    // setState to update our non-existent appearance.
-    if (!mounted) return;
-
-    setState(() {
-      _platformVersion = platformVersion;
-    });
-  }
-
-  Future<void> start() async {
-    finalResult = '';
-    setState(() {
-      _centerText = '';
-    });
-
-    try {
-      // await platform.invokeMethod('startRecognize');
-
-      final filePath = await getPath('record_note', 'wav');
-      filePaths = filePath;
-      _azureTtsFlutterPlugin.startRecognize(filePath);
-    } on PlatformException catch (e) {
-      print(e.message);
-    }
-
-    await Future.delayed(const Duration(seconds: 3));
-    String? a;
-    try {
-      a = await _azureTtsFlutterPlugin.getBluetoothDevices();
-    } catch (e) {
-      // ...
-    }
-
-    if (a != null) {
-      final List<dynamic> jsonArray = jsonDecode(a);
-      var b = jsonArray.map((map) => Map<String, String>.from(map)).toList();
-
-      for (var person in b) {
-        print('name: ${person['portName']}, type: ${person['portType']}');
-      }
-
-      if (b.isNotEmpty) {
-        print('b is not empty');
-      }
-    }
-  }
-
-  Future<void> stop() async {
-    try {
-      // await platform.invokeMethod('startRecognize');
-      print('change your name information online demoooooo');
-      _azureTtsFlutterPlugin.stopRecognize();
-    } on PlatformException catch (e) {
-      print(e.message);
-    }
-    // test();
-  }
-
-  Future platformCallHandler(MethodCall call) async {
-    switch (call.method) {
-      case "azure.onStartAvailable":
-        print(call.arguments);
-        break;
-      case "azure.onRecognitionStopped":
-        print(call.arguments);
-        break;
-      default:
-        print("Error: method called not found");
-    }
-  }
-
-  void initAzure() {
-    String key = 'xx';
-    String region = 'xx';
-    String lang = 'zh-CN';
-    _azureTtsFlutterPlugin.init(key, region, lang);
-
-    // zuckjet code
-    _azureTtsFlutterPlugin.setRecognitionResultHandler((text) {
       setState(() {
-        _centerText = finalResult;
+        _lastError = '';
+        _recognizedText = '';
       });
-    });
 
-    _azureTtsFlutterPlugin.setRecognizingHandler((text) {
+      final String key = "";
+      final String region = "";
+
+      final bool success = await azureTtsFlutterPlugin.startRecognize(
+          key, region, "zh-CN", _filePath);
+
       setState(() {
-        _centerText = finalResult + text;
+        _isRecording = success;
       });
-    });
-
-    _azureTtsFlutterPlugin.setSessionStoppedHandler((text) {
-      print(text);
-      print('log sesstion stop event');
-    });
-
-    _azureTtsFlutterPlugin.setRecognitionFileResultHandler((text) {
-      print('file result: $text');
-    });
-
-    _azureTtsFlutterPlugin.setRecognitionFileStopHandler((text) {
-      print('file stop: $text');
-    });
+    }
   }
 
-  recognizeWithFile() async {
-    _azureTtsFlutterPlugin.startRecognizeWithFile('filepath');
+  @override
+  void dispose() {
+    _interruptionSubscription?.cancel();
+    super.dispose();
   }
 
   @override
@@ -192,34 +94,45 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       home: Scaffold(
         appBar: AppBar(
-          title: const Text('azure_tts_flutter example'),
+          title: const Text('Azure TTS Flutter Example'),
         ),
-        body: Center(
+        body: Padding(
+          padding: const EdgeInsets.all(16.0),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: <Widget>[
-              Text(_centerText),
-              Container(
-                height: 60,
-              ),
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
               ElevatedButton(
-                onPressed: start,
-                child: const Text('start recognize'),
+                onPressed: _toggleRecording,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _isRecording ? Colors.red : Colors.blue,
+                  padding: const EdgeInsets.symmetric(vertical: 16.0),
+                ),
+                child: Text(
+                  _isRecording ? 'Stop Recording' : 'Start Recording',
+                  style: const TextStyle(fontSize: 18),
+                ),
               ),
-              Container(
-                height: 40,
-              ),
-              ElevatedButton(
-                onPressed: stop,
-                child: const Text('stop recognize'),
-              ),
-              Container(
-                height: 80,
-              ),
-              ElevatedButton(
-                onPressed: recognizeWithFile,
-                child: const Text('file'),
-              ),
+              const SizedBox(height: 20),
+              if (_recognizedText.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.all(16.0),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey),
+                    borderRadius: BorderRadius.circular(4.0),
+                  ),
+                  child: Text(
+                    _recognizedText,
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                ),
+              const SizedBox(height: 20),
+              if (_lastError.isNotEmpty)
+                Text(
+                  _lastError,
+                  style: const TextStyle(color: Colors.red),
+                  textAlign: TextAlign.center,
+                ),
             ],
           ),
         ),
