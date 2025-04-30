@@ -5,6 +5,8 @@ enum RecordingInterruptionReason {
   fileError,
   sessionError,
   systemInterruption,
+  stopPanic,
+  startPanic,
 }
 
 class RecordingInterruptionEvent {
@@ -31,6 +33,12 @@ class RecordingInterruptionEvent {
         break;
       case 'system_interruption':
         reason = RecordingInterruptionReason.systemInterruption;
+        break;
+      case 'start_panic':
+        reason = RecordingInterruptionReason.startPanic;
+        break;
+      case 'stop_panic':
+        reason = RecordingInterruptionReason.stopPanic;
         break;
       default:
         reason = RecordingInterruptionReason.unknown;

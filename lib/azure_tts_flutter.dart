@@ -12,8 +12,8 @@ class AzureTtsFlutter {
     return AzureTtsFlutterPlatform.instance.getBluetoothDevices();
   }
 
-  void init(String key, String region, String lang) {
-    AzureTtsFlutterPlatform.instance.init(key, region, lang);
+  void init() {
+    AzureTtsFlutterPlatform.instance.init();
   }
 
   Future<bool> startRecognize(

@@ -12,7 +12,9 @@ typedef NS_ENUM(NSInteger, RecordingInterruptionReason) {
     RecordingInterruptionReasonQueueError,
     RecordingInterruptionReasonFileError,
     RecordingInterruptionReasonSessionError,
-    RecordingInterruptionReasonSystemInterruption
+    RecordingInterruptionReasonSystemInterruption,
+    RecordingStoppedByPanic,
+    RecordingStartedByPanic
 };
 
 @protocol AudioRecorderDelegate <NSObject>

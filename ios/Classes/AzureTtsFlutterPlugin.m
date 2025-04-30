@@ -96,6 +96,12 @@ SPXSpeechRecognizer *speechRecognizer;
       case RecordingInterruptionReasonSystemInterruption:
         reasonStr = @"system_interruption";
         break;
+      case RecordingStoppedByPanic:
+        reasonStr = @"stop_panic";
+        break;
+      case RecordingStartedByPanic:
+        reasonStr = @"start_panic";
+        break;
       default:
         reasonStr = @"unknown";
         break;

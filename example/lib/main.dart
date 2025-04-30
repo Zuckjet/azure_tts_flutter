@@ -30,6 +30,7 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
+    azureTtsFlutterPlugin.init();
     _initFilePath();
 
     // Listen for recording interruptions
@@ -49,10 +50,15 @@ class _MyAppState extends State<MyApp> {
   }
 
   void _handleInterruption(RecordingInterruptionEvent event) {
+    var reason = event.reason.toString().split('.').last;
+    if (event.reason == RecordingInterruptionReason.startPanic ||
+        event.reason == RecordingInterruptionReason.stopPanic) {
+      azureTtsFlutterPlugin.stopRecognize();
+    }
+
     setState(() {
       _isRecording = false;
-      _lastError =
-          '${event.reason.toString().split('.').last} - ${event.message}';
+      _lastError = '$reason - ${event.message}';
     });
     // zhu
     print(_lastError);

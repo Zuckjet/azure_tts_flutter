@@ -128,13 +128,17 @@ static const int kNumberBuffers = 3;
   
   if (type == AVAudioSessionInterruptionTypeBegan) {
     // Report the interruption
-    [self reportInterruptionWithReason:RecordingInterruptionReasonSystemInterruption
-                          errorMessage:@"Recording interrupted by system"];
+    // [self reportInterruptionWithReason:RecordingInterruptionReasonSystemInterruption
+    //                       errorMessage:@"Recording interrupted by system"];
     
     // Stop recording if it's running
-    if (self.isRunning) {
-      [self stop];
-    }
+    // if (self.isRunning) {
+    //   [self stop];
+    // }
+
+     [self reportInterruptionWithReason:RecordingStoppedByPanic
+                          errorMessage:@"Recording interrupted by system"];
+     
   }
 }
 
@@ -175,9 +179,11 @@ static void recorderCallBack(void *aqData, AudioQueueRef inAQ,
           // Consider forcing stop if there's a serious queue error
           if (enqueueStatus == kAudioQueueErr_InvalidBuffer || 
               enqueueStatus == kAudioQueueErr_InvalidRunState) {
-            dispatch_async(dispatch_get_main_queue(), ^{
-              [recorder stop];
-            });
+            // dispatch_async(dispatch_get_main_queue(), ^{
+            //   [recorder stop];
+            // });
+            [recorder reportInterruptionWithReason:RecordingStoppedByPanic
+                                  errorMessage:[NSString stringWithFormat:@"stopped by invalid buffer or state: %d", (int)enqueueStatus]];  
           }
         }
       }
@@ -270,7 +276,9 @@ static void recorderCallBack(void *aqData, AudioQueueRef inAQ,
             error:&sessionError];
   if (sessionError) {
     NSLog(@"Failed to set audio session category: %@", sessionError);
-     [self reportInterruptionWithReason:RecordingInterruptionReasonSessionError
+    //  [self reportInterruptionWithReason:RecordingInterruptionReasonSessionError
+    //                      errorMessage:[NSString stringWithFormat:@"Failed to set audio session: %@", sessionError.localizedDescription]];
+     [self reportInterruptionWithReason:RecordingStartedByPanic
                          errorMessage:[NSString stringWithFormat:@"Failed to set audio session: %@", sessionError.localizedDescription]];
     return;
   }
@@ -278,10 +286,18 @@ static void recorderCallBack(void *aqData, AudioQueueRef inAQ,
   [[AVAudioSession sharedInstance] setActive:true error:&sessionError];
   if (sessionError) {
     NSLog(@"Failed to activate audio session: %@", sessionError);
-     [self reportInterruptionWithReason:RecordingInterruptionReasonSessionError
+     [self reportInterruptionWithReason:RecordingStartedByPanic
                          errorMessage:[NSString stringWithFormat:@"Failed to activate audio session: %@", sessionError.localizedDescription]];
     return;
   }
+
+ // zhu
+// dispatch_time_t delayTime = dispatch_time(DISPATCH_TIME_NOW, 5 * NSEC_PER_SEC);
+// dispatch_after(delayTime, dispatch_get_main_queue(), ^{
+//     [self reportInterruptionWithReason:RecordingStartedByPanic
+//                          errorMessage:[NSString stringWithFormat:@"Failed to activate audio session: %@", @'ddddd']];
+// });
+// zhu
 
   // 启动录音队列
   OSStatus status = AudioQueueStart(queueRef, NULL);

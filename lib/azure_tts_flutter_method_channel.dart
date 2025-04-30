@@ -29,7 +29,7 @@ class MethodChannelAzureTtsFlutter extends AzureTtsFlutterPlatform {
   }
 
   @override
-  void init(String key, String region, String lang) {
+  void init() {
     _channel.setMethodCallHandler(_platformCallHandler);
   }
 
