@@ -1,6 +1,9 @@
 import 'azure_tts_flutter_platform_interface.dart';
 
 class AzureTtsFlutter {
+  get onRecordingInterrupted =>
+      AzureTtsFlutterPlatform.instance.onRecordingInterrupted;
+
   Future<String?> getPlatformVersion() {
     return AzureTtsFlutterPlatform.instance.getPlatformVersion();
   }
@@ -9,20 +12,24 @@ class AzureTtsFlutter {
     return AzureTtsFlutterPlatform.instance.getBluetoothDevices();
   }
 
-  void init(String key, String region, String lang) {
-    AzureTtsFlutterPlatform.instance.init(key, region, lang);
+  void init() {
+    AzureTtsFlutterPlatform.instance.init();
   }
 
-  void startRecognize(String filePath) {
-    AzureTtsFlutterPlatform.instance.startRecognize(filePath);
+  Future<bool> startRecognize(
+      String key, String region, String lang, String filePath) async {
+    return await AzureTtsFlutterPlatform.instance
+        .startRecognize(key, region, lang, filePath);
   }
 
-  void startRecognizeWithFile(String filePath) {
-    AzureTtsFlutterPlatform.instance.startRecognizeWithFile(filePath);
+  Future<bool> startRecognizeWithFile(
+      String key, String region, String lang, String filePath) async {
+    return await AzureTtsFlutterPlatform.instance
+        .startRecognizeWithFile(key, region, lang, filePath);
   }
 
-  void stopRecognize() {
-    AzureTtsFlutterPlatform.instance.stopRecognize();
+  Future<bool> stopRecognize() async {
+    return await AzureTtsFlutterPlatform.instance.stopRecognize();
   }
 
   void setRecognitionResultHandler(StringResultHandler handler) {

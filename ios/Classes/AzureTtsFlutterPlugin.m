@@ -1,13 +1,13 @@
 #import "AzureTtsFlutterPlugin.h"
 #import "AudioRecorder.h"
 #import <MicrosoftCognitiveServicesSpeech/SPXSpeechApi.h>
-
 #import <AVFoundation/AVFoundation.h>
 
-@interface AzureTtsFlutterPlugin () {
+@interface AzureTtsFlutterPlugin () <FlutterStreamHandler> {
   AudioRecorder *recorder;
 }
-
+@property(nonatomic, strong) FlutterEventSink eventSink;
+@property(nonatomic, strong) FlutterEventChannel *eventChannel;
 @end
 
 @implementation AzureTtsFlutterPlugin
@@ -23,6 +23,12 @@ SPXSpeechRecognizer *speechRecognizer;
                                         binaryMessenger:[registrar messenger]];
   AzureTtsFlutterPlugin *instance = [[AzureTtsFlutterPlugin alloc] init];
   [registrar addMethodCallDelegate:instance channel:channel];
+
+  // Setup event channel for interruption events
+  instance.eventChannel = [FlutterEventChannel 
+                         eventChannelWithName:@"azure_tts_flutter_events"
+                         binaryMessenger:[registrar messenger]];
+  [instance.eventChannel setStreamHandler:instance];
 
   serialQueue =
       dispatch_queue_create("com.example.serialQueue", DISPATCH_QUEUE_SERIAL);
@@ -44,12 +50,14 @@ SPXSpeechRecognizer *speechRecognizer;
         dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
           [self startRecognize:key:region:lang:filePath];
         });
+    result(@YES);
   } else if ([@"stopRecognize" isEqualToString:call.method]) {
     dispatch_async(
         dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
           [speechRecognizer stopContinuousRecognition];
           [self->recorder stop];
         });
+    result(@YES);
   } else if ([@"startRecognizeWithFile" isEqualToString:call.method]) {
     NSLog(@"call method in oc");
     NSString *key = call.arguments[@"key"];
@@ -60,6 +68,7 @@ SPXSpeechRecognizer *speechRecognizer;
         dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
           [self startRecognizeWithFile:key:region:lang:filePath];
         });
+    result(@YES);
   }
 
   else {
@@ -67,11 +76,53 @@ SPXSpeechRecognizer *speechRecognizer;
   }
 }
 
+// Implementation of AudioRecorderDelegate method
+- (void)audioRecorderDidEncounterInterruption:(RecordingInterruptionReason)reason errorMessage:(NSString *)message {
+  if (self.eventSink) {
+    NSString *reasonStr;
+    switch (reason) {
+      case RecordingInterruptionReasonInvalidBuffer:
+        reasonStr = @"invalid_buffer";
+        break;
+      case RecordingInterruptionReasonQueueError:
+        reasonStr = @"queue_error";
+        break;
+      case RecordingInterruptionReasonFileError:
+        reasonStr = @"file_error";
+        break;
+      case RecordingInterruptionReasonSessionError:
+        reasonStr = @"session_error";
+        break;
+      case RecordingInterruptionReasonSystemInterruption:
+        reasonStr = @"system_interruption";
+        break;
+      case RecordingStoppedByPanic:
+        reasonStr = @"stop_panic";
+        break;
+      case RecordingStartedByPanic:
+        reasonStr = @"start_panic";
+        break;
+      default:
+        reasonStr = @"unknown";
+        break;
+    }
+    
+    NSDictionary *eventData = @{
+      @"event": @"recording_interrupted",
+      @"reason": reasonStr,
+      @"message": message ?: @""
+    };
+    
+    dispatch_async(dispatch_get_main_queue(), ^{
+      self.eventSink(eventData);
+    });
+  }
+}
+
 - (void)startRecognize:(NSString *)
                    key:(NSString *)region
                       :(NSString *)lang
                       :(NSString *)filePath {
-  NSLog(@"startRecognize 111");
   SPXSpeechConfiguration *speechConfig =
       [[SPXSpeechConfiguration alloc] initWithSubscription:key region:region];
   if (!speechConfig) {
@@ -79,7 +130,9 @@ SPXSpeechRecognizer *speechRecognizer;
   }
 
   SPXPushAudioInputStream *stream = [[SPXPushAudioInputStream alloc] init];
-  self->recorder = [[AudioRecorder alloc] initWithPushStream:stream:filePath];
+  self->recorder = [[AudioRecorder alloc] initWithPushStream:stream filePath:filePath];
+  // Set delegate to receive interruption notifications
+  self->recorder.delegate = self;
   [self->recorder record];
   SPXAudioConfiguration *audioConfig =
       [[SPXAudioConfiguration alloc] initWithStreamInput:stream];
@@ -153,6 +206,19 @@ SPXSpeechRecognizer *speechRecognizer;
 
   // Start recognizing
   [speechRecognizer startContinuousRecognition];
+}
+
+#pragma mark - FlutterStreamHandler
+
+- (FlutterError* _Nullable)onListenWithArguments:(id _Nullable)arguments
+                                       eventSink:(FlutterEventSink)events {
+  self.eventSink = events;
+  return nil;
+}
+
+- (FlutterError* _Nullable)onCancelWithArguments:(id _Nullable)arguments {
+  self.eventSink = nil;
+  return nil;
 }
 
 - (void)startRecognizeWithFiles:(NSString *)

@@ -25,6 +25,9 @@ abstract class AzureTtsFlutterPlatform extends PlatformInterface {
     _instance = instance;
   }
 
+  get onRecordingInterrupted => throw UnimplementedError(
+      'onRecordingInterrupted() has not been implemented.');
+
   Future<String?> getPlatformVersion() {
     throw UnimplementedError('platformVersion() has not been implemented.');
   }
@@ -33,20 +36,22 @@ abstract class AzureTtsFlutterPlatform extends PlatformInterface {
     throw UnimplementedError('getBluetoothDevices() has not been implemented.');
   }
 
-  void init(String key, String region, String lang) {
+  void init() {
     throw UnimplementedError('init() has not been implemented.');
   }
 
-  void startRecognize(String filePath) {
+  Future<bool> startRecognize(
+      String key, String region, String lang, String filePath) {
     throw UnimplementedError('startRecognize() has not been implemented.');
   }
 
-  void startRecognizeWithFile(String filePath) {
+  Future<bool> startRecognizeWithFile(
+      String key, String region, String lang, String filePath) {
     throw UnimplementedError(
         'startRecognizeWithFile() has not been implemented.');
   }
 
-  void stopRecognize() {
+  Future<bool> stopRecognize() {
     throw UnimplementedError('stopRecognize() has not been implemented.');
   }
 
